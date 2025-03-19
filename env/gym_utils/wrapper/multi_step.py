@@ -106,6 +106,7 @@ class MultiStep(gym.Wrapper):
         self.reset_within_step = reset_within_step
         self.pass_full_observations = pass_full_observations
         self.verbose = verbose
+        self.reset_options = {}
 
     def reset(
         self,
@@ -128,6 +129,7 @@ class MultiStep(gym.Wrapper):
         self.done = list()
         self.info = defaultdict(lambda: deque(maxlen=self.n_obs_steps + 1))
         obs = self._get_obs(self.n_obs_steps)
+        self.reset_options = options
 
         self.cnt = 0
         return obs
@@ -182,7 +184,7 @@ class MultiStep(gym.Wrapper):
 
             # reset
             observation = (
-                self.reset()
+                self.reset(self.reset_options)
             )  # TODO: arguments? this cannot handle video recording right now since needs to pass in options
             self.verbose and print("Reset env within wrapper.")
 

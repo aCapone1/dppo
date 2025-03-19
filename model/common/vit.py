@@ -156,11 +156,10 @@ class MinVit(nn.Module):
         num_head,
         depth,
         num_channel=3,
-        img_h=96,
-        img_w=96,
+        img_h=96, #96
+        img_w=96, #96
     ):
         super().__init__()
-
         if embed_style == "embed1":
             self.patch_embed = PatchEmbed1(
                 embed_dim,
@@ -178,7 +177,6 @@ class MinVit(nn.Module):
             )
         else:
             assert False
-
         self.pos_embed = nn.Parameter(
             torch.zeros(1, self.patch_embed.num_patch, embed_dim)
         )

@@ -1,5 +1,8 @@
 import os
 import json
+import gymnasium as gym
+import hydra
+from stable_baselines3.common.vec_env import VecVideoRecorder, DummyVecEnv
 
 try:
     from collections.abc import Iterable
@@ -129,7 +132,6 @@ def make_async(
     else:
         import d4rl.gym_mujoco
     from gym.envs import make as make_
-
     def _make_env():
         if robomimic_env_cfg_path is not None:
             obs_modality_dict = {
@@ -167,7 +169,27 @@ def make_async(
         else:  # d3il, gym
             if "kitchen" not in id:  # d4rl kitchen does not support rendering!
                 kwargs["render"] = render
-            env = make_(id, **kwargs)
+            if "torchdriveenv-v0" in id:
+                import torchdriveenv
+                training_data = hydra.utils.instantiate(kwargs['data'])
+                env_config = hydra.utils.instantiate(kwargs['env_config'])
+                env_config = torchdriveenv.gym_env.EnvConfig(**env_config) #hydra.utils.instantiate(kwargs['env_config'])
+                make_td_env = lambda: gym.make(id, args={"cfg": env_config, "data": training_data})
+                # if render_offscreen:
+                #     env = DummyVecEnv([make_td_env])
+                #     # render example scenario
+                #     env = VecVideoRecorder(
+                #         venv=env,
+                #         video_folder="log/videos/",
+                #         record_video_trigger=lambda x: x % 400 == 0,
+                #         video_length=400,
+                #         name_prefix=env_config.video_filename,
+                #     )
+                # else:
+                #     env = make_td_env()
+                env = make_td_env()
+            else:
+                env = make_(id, **kwargs)
 
         # add wrappers
         if wrappers is not None:
@@ -216,9 +238,10 @@ def make_async(
             "video.frames_per_second": 12,
         }
         return MultiStep(env=env, n_obs_steps=wrappers.multi_step.n_obs_steps)
+    
 
     env_fns = [_make_env for _ in range(num_envs)]
-    return (
+    venv = (
         AsyncVectorEnv(
             env_fns,
             dummy_env_fn=(
@@ -229,3 +252,28 @@ def make_async(
         if asynchronous
         else SyncVectorEnv(env_fns)
     )
+    # if "torchdriveenv-v0" in id:
+    #     if render_offscreen:
+    #         import torchdriveenv
+    #         env_config = hydra.utils.instantiate(kwargs['env_config'])
+    #         env_config = torchdriveenv.gym_env.EnvConfig(**env_config) #hydra.utils.instantiate(kwargs['env_config'])
+    #         # render example scenario
+    #         venv = VecVideoRecorder(
+    #             venv=venv,
+    #             video_folder="log/videos/",
+    #             record_video_trigger=lambda x: x % 400 == 0,
+    #             video_length=400,
+    #             name_prefix=env_config.video_filename,
+    #         )
+    return venv
+    # return (
+    #     AsyncVectorEnv(
+    #         env_fns,
+    #         dummy_env_fn=(
+    #             dummy_env_fn if render or render_offscreen or use_image_obs else None
+    #         ),
+    #         delay_init="avoiding" in id,  # add delay for D3IL initialization
+    #     )
+    #     if asynchronous
+    #     else SyncVectorEnv(env_fns)
+    # )

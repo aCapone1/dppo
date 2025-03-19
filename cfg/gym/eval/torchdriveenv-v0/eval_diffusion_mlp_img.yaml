@@ -1,0 +1,119 @@
+defaults:
+  - _self_
+hydra:
+  run:
+    dir: ${logdir}
+_target_: agent.eval.eval_diffusion_img_agent.EvalImgDiffusionAgent
+
+name: ${env_name}_eval_diffusion_mlp_img_ta${horizon_steps}_td${denoising_steps}
+logdir: ${oc.env:DPPO_LOG_DIR}/gym-eval/${name}/${now:%Y-%m-%d}_${now:%H-%M-%S}_${seed}
+# base_policy_path: ${oc.env:DPPO_LOG_DIR}/gym-pretrain/torchdriveenv-v0_pre_diffusion_mlp_img_ta4_td100/2025-03-07_10-53-54_42/checkpoint/state_5.pt
+base_policy_path: ${oc.env:DPPO_LOG_DIR}/torchdriveenv-v0-finetune/torchdriveenv-v0_ft_diffusion_mlp_img_ta4_td100_tdf5/2025-03-10_14-22-54_42/checkpoint/state_100.pt
+torchdriveenv-v0_env_cfg_path: cfg/torchdriveenv-v0/env_meta/${env_name}-img.json
+normalization_path: ${oc.env:DPPO_DATA_DIR}/gym/${env_name}/normalization.npz
+video_name: ${now:%Y-%m-%d}_${now:%H-%M-%S}_${seed}
+
+seed: 42
+device: cuda:0
+env_name: torchdriveenv-v0
+train_data_dir: data/torchdriveenv-v0
+obs_dim: 4
+action_dim: 2
+denoising_steps: 100
+ddim_steps: 5
+ft_denoising_steps: 0
+cond_steps: 1
+img_cond_steps: 1
+horizon_steps: 4
+act_steps: 4
+use_ddim: True
+
+n_steps: 2_000  # each episode takes max_episode_steps / act_steps steps
+render_num: 1
+
+
+env:
+  n_envs: 1
+  name: ${env_name}
+  best_reward_threshold_for_success: 1
+  max_episode_steps: 2_000
+  save_video: True
+  use_image_obs: True
+  specific:
+    data:
+      _target_: torchdriveenv.env_utils.load_default_train_data
+    env_config:
+      device: 'cpu'
+      seed: 42
+      ego_only: false
+      frame_stack: 3
+      waypoint_bonus: 100.
+      heading_penalty: 25.
+      distance_bonus: 1.
+      distance_cutoff: 0.25
+  wrappers:
+    torchdriveenv_image:
+      normalization_path: ${normalization_path}
+      shape_meta: ${shape_meta}
+      # video_name: ${video_name}
+    multi_step:
+      n_obs_steps: ${cond_steps}
+      n_action_steps: ${act_steps}
+      max_episode_steps: ${env.max_episode_steps}
+      reset_within_step: True
+
+shape_meta:
+  obs:
+    rgb:
+      shape: [3, 64, 64]
+    state:
+      shape: [4]
+  action: 
+    shape: [2]
+
+wandb:
+  entity: ${oc.env:DPPO_WANDB_ENTITY}
+  project: ${env_name}-eval
+  run: ${now:%H-%M-%S}_${name}
+
+
+model:
+  # _target_: model.diffusion.diffusion_eval_ft.DiffusionEval
+  _target_: model.diffusion.diffusion_eval.DiffusionEval
+  predict_epsilon: True
+  denoised_clip_value: 1.0
+  #
+  ddim_steps: ${ddim_steps}
+  network_path: ${base_policy_path}
+  #
+  use_ddim: ${use_ddim}
+  network:
+    _target_: model.diffusion.mlp_diffusion.VisionDiffusionMLP
+    backbone:
+      _target_: model.common.vit.VitEncoder
+      obs_shape: ${shape_meta.obs.rgb.shape}
+      num_channel: ${eval:'3 * ${img_cond_steps}'} # each image patch is history concatenated
+      img_h: ${shape_meta.obs.rgb.shape[1]}
+      img_w: ${shape_meta.obs.rgb.shape[2]}
+      cfg:
+        patch_size: 8
+        depth: 1
+        embed_dim: 128
+        num_heads: 4
+        embed_style: embed2
+        embed_norm: 0
+    augment: False
+    spatial_emb: 128
+    time_dim: 32
+    mlp_dims: [512, 512, 512]
+    residual_style: True
+    img_cond_steps: ${img_cond_steps}
+    cond_dim: ${eval:'${obs_dim} * ${cond_steps}'}
+    horizon_steps: ${horizon_steps}
+    action_dim: ${action_dim}
+  ft_denoising_steps: ${ft_denoising_steps}
+  horizon_steps: ${horizon_steps}
+  obs_dim: ${obs_dim}
+  action_dim: ${action_dim}
+  denoising_steps: ${denoising_steps}
+  device: ${device}

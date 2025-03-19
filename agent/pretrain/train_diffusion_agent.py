@@ -23,7 +23,6 @@ class TrainDiffusionAgent(PreTrainAgent):
         self.epoch = 1
         cnt_batch = 0
         for _ in range(self.n_epochs):
-
             # train
             loss_train_epoch = []
             for batch_train in self.dataloader_train:

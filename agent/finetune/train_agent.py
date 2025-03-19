@@ -78,7 +78,7 @@ class TrainAgent:
 
         # Batch size for gradient update
         self.batch_size: int = cfg.train.batch_size
-
+        
         # Build model and load checkpoint
         self.model = hydra.utils.instantiate(cfg.model)
 

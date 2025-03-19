@@ -6,41 +6,43 @@ hydra:
 _target_: agent.pretrain.train_diffusion_agent.TrainDiffusionAgent
 
 name: ${env}_pre_diffusion_mlp_img_ta${horizon_steps}_td${denoising_steps}
-logdir: ${oc.env:DPPO_LOG_DIR}/robomimic-pretrain/${name}/${now:%Y-%m-%d}_${now:%H-%M-%S}_${seed}
-train_dataset_path: ${oc.env:DPPO_DATA_DIR}/robomimic/${env}-img/train.npz
-# train_dataset_path: ${oc.env:DPPO_DATA_DIR}/gym/pretrain/torchdriveenv-v0/train.npz
+logdir: ${oc.env:DPPO_LOG_DIR}/gym-pretrain/${name}/${now:%Y-%m-%d}_${now:%H-%M-%S}_${seed}
+train_dataset_path: ${oc.env:DPPO_DATA_DIR}/gym/${env}/train.npz
+
 seed: 42
 device: cuda:0
-env: can
-obs_dim: 9  # proprioception only
-action_dim: 7
+env: torchdriveenv-v0
+# obs_dim: 0
+obs_dim: 4 # proprioception only
+action_dim: 2
 denoising_steps: 100
 horizon_steps: 4
 cond_steps: 1
 img_cond_steps: 1
 
 wandb:
-  entity: ${oc.env:DPPO_WANDB_ENTITY}
-  project: robomimic-${env}-pretrain
+entity: ${oc.env:DPPO_WANDB_ENTITY}
+  project: gym-${env}-pretrain
   run: ${now:%H-%M-%S}_${name}
 
 shape_meta:
   obs:
     rgb:
-      shape: [3, 96, 96]  # not counting img_cond_steps
+      shape: [3, 64, 64]  # not counting img_cond_steps
     state:
-      shape: [9]
+      # shape: [0]
+      shape: [4]
   action: 
-    shape: [7]
+    shape: [2]
 
 train:
-  n_epochs: 2000
+  n_epochs: 5 #2000
   batch_size: 256
   learning_rate: 1e-4
   weight_decay: 1e-6
   lr_scheduler:
-    first_cycle_steps: 2000
-    warmup_steps: 100
+    first_cycle_steps: 5 #2000
+    warmup_steps: 4 #100
     min_lr: 1e-5
   save_model_freq: 500
 
@@ -61,6 +63,8 @@ model:
         num_heads: 4
         embed_style: embed2
         embed_norm: 0
+      img_h: ${shape_meta.obs.rgb.shape[1]}
+      img_w: ${shape_meta.obs.rgb.shape[2]}
     img_cond_steps: ${img_cond_steps}
     augment: True
     spatial_emb: 128

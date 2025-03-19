@@ -144,6 +144,7 @@ class PreTrainAgent:
         self.ema.update_model_average(self.ema_model, self.model)
 
     def save_model(self):
+        breakpoint()
         """
         saves model and ema to disk;
         """

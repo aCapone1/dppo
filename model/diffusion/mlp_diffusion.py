@@ -39,7 +39,6 @@ class VisionDiffusionMLP(nn.Module):
         augment=False,
     ):
         super().__init__()
-
         # vision
         self.backbone = backbone
         if augment:
@@ -116,7 +115,6 @@ class VisionDiffusionMLP(nn.Module):
         """
         B, Ta, Da = x.shape
         _, T_rgb, C, H, W = cond["rgb"].shape
-
         # flatten chunk
         x = x.view(B, -1)
 
@@ -135,7 +133,6 @@ class VisionDiffusionMLP(nn.Module):
 
         # convert rgb to float32 for augmentation
         rgb = rgb.float()
-
         # get vit output - pass in two images separately
         if self.num_img > 1:  # TODO: properly handle multiple images
             rgb1 = rgb[:, 0]

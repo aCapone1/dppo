@@ -7,6 +7,7 @@ import os
 import sys
 import pretty_errors
 import logging
+import torchdriveenv
 
 import math
 import hydra
@@ -18,13 +19,19 @@ from download_url import (
     get_checkpoint_download_url,
 )
 
+
 # allows arbitrary python code execution in configs using the ${eval:''} resolver
 OmegaConf.register_new_resolver("eval", eval, replace=True)
 OmegaConf.register_new_resolver("round_up", math.ceil)
 OmegaConf.register_new_resolver("round_down", math.floor)
 
-# suppress d4rl import error
+# suppress d4rl import er
+# ror
 os.environ["D4RL_SUPPRESS_IMPORT_ERROR"] = "1"
+os.environ['DPPO_WANDB_ENTITY'] = 'acapone2-carnegie-mellon-university'
+os.environ['CUDA_VISIBLE_DEVICES'] = '1,2'
+sys.path.append('../optimal_scenario_selection/')
+sys.path.append('../optimal_scenario_selection/examples/')
 
 # add logger
 log = logging.getLogger(__name__)
@@ -40,10 +47,11 @@ sys.stderr = open(sys.stderr.fileno(), mode="w", buffering=1)
         os.getcwd(), "cfg"
     ),  # possibly overwritten by --config-path
 )
+
 def main(cfg: OmegaConf):
     # resolve immediately so all the ${now:} resolvers will use the same time.
     OmegaConf.resolve(cfg)
-
+    
     # For pre-training: download dataset if needed
     if "train_dataset_path" in cfg and not os.path.exists(cfg.train_dataset_path):
         download_url = get_dataset_download_url(cfg)

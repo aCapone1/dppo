@@ -25,6 +25,7 @@ class MujocoLocomotionLowdimWrapper(gym.Env):
         self.action_min = normalization["action_min"]
         self.action_max = normalization["action_max"]
 
+        breakpoint()
         self.observation_space = spaces.Dict()
         obs_example = self.env.reset()
         low = np.full_like(obs_example, fill_value=-1)
